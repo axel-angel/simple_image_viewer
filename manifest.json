@@ -1,0 +1,21 @@
+{
+  "name": "Simple Image Viewer",
+  "version": "0.1",
+  "description": "Enhance the experience of viewing images",
+  "permissions": [ "activeTab" ],
+  "content_scripts": [
+    {
+      "matches": [
+          "*://*/*.jpg",
+          "*://*/*.jpeg",
+          "*://*/*.png",
+          "*://*/*.gif",
+          "*://*/*.bmp",
+          "*://*/*.webp"
+      ],
+      "js": ["script.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "manifest_version": 3
+}
