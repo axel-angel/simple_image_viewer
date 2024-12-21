@@ -2,7 +2,10 @@
   "name": "Simple Image Viewer",
   "version": "0.1",
   "description": "Enhance the experience of viewing images",
-  "permissions": [ "activeTab" ],
+  "permissions": ["activeTab", "scripting", "contextMenus"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [

@@ -10,15 +10,15 @@ const $img = (() => {
   return $img2;
 })();
 
-//document.addEventListener('DOMContentLoaded', function() {
-//(() => {
 $img.addEventListener('load', () => {
   console.log(['simple image viewer extension started']);
-  let isDragging = false;
+  const height = $img.height;
+  const width = $img.width;
+  const imageRatio = width / height;
+
+  let mouseDown = false, mouseDragStarted = false;
   let dragLastX, dragLastY;
   let scale = 1.0;
-  let height = $img.height;
-  let width = $img.width;
 
   const update_$img = () => {
     //$img.style.transformOrigin = `${(offsetX / rect.width) * 100}% ${(offsetY / rect.height) * 100}%`;
@@ -26,30 +26,54 @@ $img.addEventListener('load', () => {
   };
 
   $img.style.position = 'absolute';
+  $img.style.transformOrigin = 'center center';
   // centering ourself
-  let imgX = (window.innerWidth  - width)/2;
-  let imgY = (window.innerHeight - height)/2;
+  let imgX, imgY;
+  const center_$img = () => {
+    imgX = (window.innerWidth  - width)/2;
+    imgY = (window.innerHeight - height)/2;
+  };
+  center_$img();
   update_$img();
 
   $img.addEventListener('mousedown', function(event) {
-    event.stopImmediatePropagation(); // prevent zoom
-    isDragging = true;
+    if (event.altKey) return; // system drag and drop
+    if (event.button !== 0) return; // only left click
+    event.preventDefault();
+    mouseDown = true;
     dragLastX = event.clientX;
     dragLastY = event.clientY;
   });
 
-  document.addEventListener('mousemove', function(event) {
-    if (!isDragging) return;
-    event.preventDefault(); // TODO: allows to drag drop outside window
+  $img.addEventListener('mouseup', function(event) {
+    if (!mouseDragStarted) { // simple click = toggle fullscreen
+      if (scale == 1) {
+        const displayRatio = window.innerWidth / window.innerHeight;
+        const wideFit = imageRatio > displayRatio;
+        scale = wideFit ? window.innerWidth / width : window.innerHeight / height;
+        center_$img();
+        update_$img();
+      }
+      else {
+        scale = 1;
+        center_$img();
+        update_$img();
+      }
+    }
+
+    mouseDown = false;
+    mouseDragStarted = false;
+  });
+
+  $img.addEventListener('mousemove', function(event) {
+    if (!mouseDown) return;
+    event.preventDefault();
     imgX += event.clientX - dragLastX;
     imgY += event.clientY - dragLastY;
     dragLastX = event.clientX;
     dragLastY = event.clientY;
     update_$img();
-  });
-
-  document.addEventListener('mouseup', function() {
-    isDragging = false;
+    mouseDragStarted = true;
   });
 
   $img.addEventListener('wheel', function(event) {
@@ -68,4 +92,4 @@ $img.addEventListener('load', () => {
     imgY -= adjustY;
     update_$img();
   });
-})();
+});
