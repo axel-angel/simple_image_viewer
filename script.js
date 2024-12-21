@@ -5,8 +5,11 @@ const zoom_factor = 1.15; // scroll
 const $img = (() => {
   const $img1 = document.querySelector('img');
   const $img2 = $img1.cloneNode(true);
+  $img2.removeAttribute('transition');
+  $img2.removeAttribute('width');
+  $img2.removeAttribute('height');
   $img1.parentNode.replaceChild($img2, $img1);
-  $img2.style.cursor = "inherit";
+  $img2.style.backgroundColor = 'black';
   return $img2;
 })();
 
@@ -27,11 +30,17 @@ $img.addEventListener('load', () => {
 
   $img.style.position = 'absolute';
   $img.style.transformOrigin = 'center center';
-  // centering ourself
+  $img.style.cursor = "inherit";
   const center_$img = () => {
     imageX = (window.innerWidth  - width)/2;
     imageY = (window.innerHeight - height)/2;
   };
+  const fit_$img = () => { // find perfect fit
+    const displayRatio = window.innerWidth / window.innerHeight;
+    const wideFit = imageRatio > displayRatio;
+    scale = wideFit ? window.innerWidth / width : window.innerHeight / height;
+  };
+  fit_$img();
   center_$img();
   update_$img();
 
@@ -47,15 +56,24 @@ $img.addEventListener('load', () => {
   $img.addEventListener('mouseup', function(event) {
     if (!mouseDragStarted) { // simple click = toggle fullscreen
       if (scale == 1) {
-        const displayRatio = window.innerWidth / window.innerHeight;
-        const wideFit = imageRatio > displayRatio;
-        scale = wideFit ? window.innerWidth / width : window.innerHeight / height;
+        fit_$img();
         center_$img();
         update_$img();
       }
       else {
-        scale = 1;
+        // center on mouse position
+        const rect = $img.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        const midY = rect.top + rect.height / 2;
+        const deltaX = event.clientX - midX;
+        const deltaY = event.clientY - midY;
+        console.log(['perfect fit pos', {midX, midY, deltaX, deltaY}]);
         center_$img();
+        imageX -= deltaX/scale;
+        imageY -= deltaY/scale;
+
+        scale = 1;
+        //center_$img();
         update_$img();
       }
     }

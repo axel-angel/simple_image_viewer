@@ -10,7 +10,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Open a new search tab when the user clicks a context menu
 chrome.contextMenus.onClicked.addListener((item, tab) => {
   if (item.menuItemId != 'improve-image-viewer') return; // unhandled
-  console.log(['contextMenus.onClicked', item, tab]);
 
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
@@ -19,7 +18,6 @@ chrome.contextMenus.onClicked.addListener((item, tab) => {
       return $els.length === 1 && $els[0].tagName.toLowerCase() === 'img';
     }
   }).then(results => {
-    console.log(['ext results', results]);
     if (results[0].result) {
       // Execute content script if result is true (image-only page)
       chrome.scripting.executeScript({
