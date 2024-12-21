@@ -18,20 +18,19 @@ $img.addEventListener('load', () => {
 
   let mouseDown = false, mouseDragStarted = false;
   let dragLastX, dragLastY;
+  let imageX, imageY, imgRotation = 0;
   let scale = 1.0;
 
   const update_$img = () => {
-    //$img.style.transformOrigin = `${(offsetX / rect.width) * 100}% ${(offsetY / rect.height) * 100}%`;
-    $img.style.transform = `translate(${imgX}px, ${imgY}px) scale(${scale})`;
+    $img.style.transform = `translate(${imageX}px, ${imageY}px) scale(${scale}) rotate(${imgRotation}rad)`;
   };
 
   $img.style.position = 'absolute';
   $img.style.transformOrigin = 'center center';
   // centering ourself
-  let imgX, imgY;
   const center_$img = () => {
-    imgX = (window.innerWidth  - width)/2;
-    imgY = (window.innerHeight - height)/2;
+    imageX = (window.innerWidth  - width)/2;
+    imageY = (window.innerHeight - height)/2;
   };
   center_$img();
   update_$img();
@@ -65,14 +64,44 @@ $img.addEventListener('load', () => {
     mouseDragStarted = false;
   });
 
+  on_move_drag = event => {
+    event.preventDefault();
+    imageX += event.clientX - dragLastX;
+    imageY += event.clientY - dragLastY;
+    update_$img();
+  };
+  on_move_rotate = event => {
+    // compute 2 vectors: from image center to prev pos and to new pos
+    const rect = $img.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    const midY = rect.top + rect.height / 2;
+    const vec1X = event.clientX - midX;
+    const vec1Y = event.clientY - midY;
+    const vec2X = dragLastX - midX;
+    const vec2Y = dragLastY - midY;
+    // compute angle between the two vectors (normalize)
+    // dot product: |a|.|b|.cos a = a.b
+    const norm1 = Math.sqrt(vec1X**2 + vec1Y**2)
+    const norm2 = Math.sqrt(vec2X**2 + vec2Y**2);
+    if (norm1 <= 0.01 || norm2 <= 0.01) return; // ignore if too small
+    const dot0 = (vec1X*vec2X + vec1Y*vec2Y);
+    const dot = Math.min(1.0, Math.max(0.0, dot0 / (norm1 * norm2))); // fix imprecisions
+    const alpha = Math.acos(dot);
+    // need to determine sign = direction: CW or CCW
+    // cross product: |a|x|b|.sin b = a x b  (only need the sign of sin b)
+    const cross0 = vec1X * vec2Y - vec2X * vec1Y;
+    // signed angle in radians
+    imgRotation += alpha * (cross0 > 0 ? -1 : +1);
+    update_$img();
+  };
   $img.addEventListener('mousemove', function(event) {
     if (!mouseDown) return;
-    event.preventDefault();
-    imgX += event.clientX - dragLastX;
-    imgY += event.clientY - dragLastY;
+    if (event.shiftKey)
+      on_move_rotate(event);
+    else
+      on_move_drag(event);
     dragLastX = event.clientX;
     dragLastY = event.clientY;
-    update_$img();
     mouseDragStarted = true;
   });
 
@@ -88,8 +117,8 @@ $img.addEventListener('load', () => {
     const adjustX = relX * (ratio - 1);
     const adjustY = relY * (ratio - 1);
     // Adjust translation to keep image centered on mouse
-    imgX -= adjustX;
-    imgY -= adjustY;
+    imageX -= adjustX;
+    imageY -= adjustY;
     update_$img();
   });
 });
