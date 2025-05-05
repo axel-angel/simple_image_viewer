@@ -40,7 +40,8 @@ $img.addEventListener('load', () => {
     const wideFit = imageRatio > displayRatio;
     scale = wideFit ? window.innerWidth / width : window.innerHeight / height;
   };
-  fit_$img();
+  if (width >= window.innerWidth || height >= window.innerHeight) // fit if too big
+    fit_$img();
   center_$img();
   update_$img();
 
