@@ -9,12 +9,13 @@
   "content_scripts": [
     {
       "matches": [
-          "*://*/*.jpg",
-          "*://*/*.jpeg",
-          "*://*/*.png",
-          "*://*/*.gif",
-          "*://*/*.bmp",
-          "*://*/*.webp"
+          "*://*/*.jpg*",
+          "*://*/*.jpeg*",
+          "*://*/*.avif*",
+          "*://*/*.png*",
+          "*://*/*.gif*",
+          "*://*/*.bmp*",
+          "*://*/*.webp*"
       ],
       "js": ["script.js"],
       "run_at": "document_end"
