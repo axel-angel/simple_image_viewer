@@ -19,16 +19,37 @@ $img.addEventListener('load', () => {
   const width = $img.width;
   const imageRatio = width / height;
 
-  let mouseDown = false, mouseDragStarted = false;
+  let mouseDown, mouseDragStarted;
   let dragLastX, dragLastY;
-  let imageX, imageY, imgRotation = 0;
-  let scale = 1.0;
-  let flipH = false, flipV = false;
+  let imageX, imageY, imgRotation;
+  let scale;
+  let flipH, flipV;
+  let pixelated, brightness, contrast, inverted;
+
+  const reset_$img = () => {
+    mouseDown = false;
+    mouseDragStarted = false;
+    dragLastX = 0;
+    dragLastY = 0;
+    imageX = 0;
+    imageY = 0;
+    imgRotation = 0;
+    scale = 1.0;
+    flipH = false;
+    flipV = false;
+    pixelated = false;
+    brightness = 1.0;
+    contrast = 1.0;
+    inverted = false;
+  };
+  reset_$img();
 
   const update_$img = () => {
     const scaleX = scale * (flipH ? -1 : +1);
     const scaleY = scale * (flipV ? -1 : +1);
     $img.style.transform = `translate(${imageX}px, ${imageY}px) scale(${scaleX}, ${scaleY}) rotate(${imgRotation}rad)`;
+    $img.style.imageRendering = pixelated ? 'pixelated' : 'auto';
+    $img.style.filter = `invert(${inverted ? 1 : 0}) brightness(${brightness}) contrast(${contrast})`;
   };
 
   $img.style.position = 'absolute';
@@ -85,18 +106,21 @@ $img.addEventListener('load', () => {
     mouseDragStarted = false;
   });
 
-  on_move_drag = event => {
+  on_move_drag = (event) => {
     event.preventDefault();
     imageX += event.clientX - dragLastX;
     imageY += event.clientY - dragLastY;
     update_$img();
   };
-  on_move_rotate = event => {
+  on_move_rotate = (event, aroundWindowCenter) => {
     // rotation by dragging
-    // compute 2 vectors: from image center to prev pos and to new pos
     const rect = $img.getBoundingClientRect();
-    const midX = rect.left + rect.width / 2;
-    const midY = rect.top + rect.height / 2;
+    const imgCenterX = rect.left + rect.width / 2;
+    const imgCenterY = rect.top + rect.height / 2;
+
+    // compute 2 vectors: from image center to prev pos and to new pos
+    const midX = aroundWindowCenter ? window.innerWidth  / 2 : imgCenterX;
+    const midY = aroundWindowCenter ? window.innerHeight / 2 : imgCenterY;
     const vec1X = event.clientX - midX;
     const vec1Y = event.clientY - midY;
     const vec2X = dragLastX - midX;
@@ -113,18 +137,38 @@ $img.addEventListener('load', () => {
     // cross product: |a|x|b|.sin b = a x b  (only need the sign of sin b)
     const cross0 = vec1X * vec2Y - vec2X * vec1Y;
     // signed angle in radians
-    imgRotation += alpha * (cross0 > 0 ? -1 : +1) * (flipH ^ flipV ? -1 : +1);
+    const sign = cross0 > 0 ? -1 : +1;
+    const flipFactor = flipH ^ flipV ? -1 : +1;
+    imgRotation += alpha * sign * flipFactor;
 
     // scale by dragging
     const scaleRatio = norm1 / norm2;
     scale *= scaleRatio;
+
+    if (aroundWindowCenter) {
+      // correct translation so rotation is around window center
+      const dx = imgCenterX - midX;
+      const dy = imgCenterY - midY;
+      const cosA = Math.cos(alpha * sign);
+      const sinA = Math.sin(alpha * sign);
+      imageX += dx * (cosA - 1) - dy * sinA;
+      imageY += dx * sinA + dy * (cosA - 1);
+
+      // same correction but for scaling
+      const adjustX = (midX - imgCenterX) * (scaleRatio - 1);
+      const adjustY = (midY - imgCenterY) * (scaleRatio - 1);
+      imageX -= adjustX;
+      imageY -= adjustY;
+    }
 
     update_$img();
   };
   $img.addEventListener('mousemove', function(event) {
     if (!mouseDown) return;
     if (event.shiftKey)
-      on_move_rotate(event);
+      on_move_rotate(event, true); // around window center
+    else if (event.ctrlKey)
+      on_move_rotate(event, false); // around image center
     else
       on_move_drag(event);
     dragLastX = event.clientX;
@@ -139,8 +183,9 @@ $img.addEventListener('load', () => {
     const relX = event.clientX - (rect.left + rect.width / 2);
     const relY = event.clientY - (rect.top + rect.height / 2);
 
-    let ratio = event.deltaY > 0 ? 1/zoom_factor : zoom_factor;
-    scale *= ratio
+    const factor = event.shiftKey ? zoom_factor*(1+0.2) : zoom_factor;
+    const ratio = event.deltaY > 0 ? 1/factor : factor;
+    scale *= ratio;
     const adjustX = relX * (ratio - 1);
     const adjustY = relY * (ratio - 1);
     // Adjust translation to keep image centered on mouse
@@ -151,8 +196,7 @@ $img.addEventListener('load', () => {
 
   document.addEventListener('keypress', function(event) {
     if (event.key == ' ') { // reset
-      imageX, imageY, imgRotation = 0;
-      flipH = flipV = false;
+      reset_$img();
       center_$img();
       fit_$img();
       update_$img();
@@ -173,5 +217,34 @@ $img.addEventListener('load', () => {
       imgRotation -= Math.PI/2;
       update_$img();
     }
+    else if (event.key == 'p') { // toggle pixelated (no interpolation)
+      pixelated = !pixelated;
+      update_$img();
+    }
+    else if (event.key == '+') {
+      brightness += 0.1;
+      update_$img();
+    }
+    else if (event.key == '-') {
+      brightness -= 0.1;
+      update_$img();
+    }
+    else if (event.key == '*') {
+      contrast += 0.1;
+      update_$img();
+    }
+    else if (event.key == '/') {
+      contrast -= 0.1;
+      update_$img();
+    }
+    else if (event.key == 'i') {
+      inverted = !inverted;
+      update_$img();
+    }
+  });
+
+  $img.addEventListener('mouseout', (event) => {
+    mouseDown = false;
+    mouseDragStarted = false;
   });
 });
