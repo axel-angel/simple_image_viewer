@@ -23,9 +23,12 @@ $img.addEventListener('load', () => {
   let dragLastX, dragLastY;
   let imageX, imageY, imgRotation = 0;
   let scale = 1.0;
+  let flipH = false, flipV = false;
 
   const update_$img = () => {
-    $img.style.transform = `translate(${imageX}px, ${imageY}px) scale(${scale}) rotate(${imgRotation}rad)`;
+    const scaleX = scale * (flipH ? -1 : +1);
+    const scaleY = scale * (flipV ? -1 : +1);
+    $img.style.transform = `translate(${imageX}px, ${imageY}px) scale(${scaleX}, ${scaleY}) rotate(${imgRotation}rad)`;
   };
 
   $img.style.position = 'absolute';
@@ -74,7 +77,6 @@ $img.addEventListener('load', () => {
         imageY -= deltaY/scale;
 
         scale = 1;
-        //center_$img();
         update_$img();
       }
     }
@@ -90,6 +92,7 @@ $img.addEventListener('load', () => {
     update_$img();
   };
   on_move_rotate = event => {
+    // rotation by dragging
     // compute 2 vectors: from image center to prev pos and to new pos
     const rect = $img.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
@@ -110,7 +113,12 @@ $img.addEventListener('load', () => {
     // cross product: |a|x|b|.sin b = a x b  (only need the sign of sin b)
     const cross0 = vec1X * vec2Y - vec2X * vec1Y;
     // signed angle in radians
-    imgRotation += alpha * (cross0 > 0 ? -1 : +1);
+    imgRotation += alpha * (cross0 > 0 ? -1 : +1) * (flipH ^ flipV ? -1 : +1);
+
+    // scale by dragging
+    const scaleRatio = norm1 / norm2;
+    scale *= scaleRatio;
+
     update_$img();
   };
   $img.addEventListener('mousemove', function(event) {
@@ -139,5 +147,31 @@ $img.addEventListener('load', () => {
     imageX -= adjustX;
     imageY -= adjustY;
     update_$img();
+  });
+
+  document.addEventListener('keypress', function(event) {
+    if (event.key == ' ') { // reset
+      imageX, imageY, imgRotation = 0;
+      flipH = flipV = false;
+      center_$img();
+      fit_$img();
+      update_$img();
+    }
+    else if (event.key == 'v') { // mirror vertically
+      flipV = !flipV;
+      update_$img();
+    }
+    else if (event.key == 'h') { // mirror horizontally
+      flipH = !flipH;
+      update_$img();
+    }
+    else if (event.key == 'q') { // rotate 90° CCW
+      imgRotation += Math.PI/2;
+      update_$img();
+    }
+    else if (event.key == 'e') { // rotate 90° CW
+      imgRotation -= Math.PI/2;
+      update_$img();
+    }
   });
 });
