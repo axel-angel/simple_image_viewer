@@ -1,4 +1,4 @@
-const zoom_factor = 1.15; // scroll
+const zoom_factor = 1.2; // scroll
 //const browserapi = window.chrome || browser; // firefox/chrome
 
 // clone img to get rid of the browser listeners and behavior
@@ -112,7 +112,7 @@ $img.addEventListener('load', () => {
     imageY += event.clientY - dragLastY;
     update_$img();
   };
-  on_move_rotate = (event, aroundWindowCenter) => {
+  on_move_rotate = (event, {aroundWindowCenter = true, scaling = false}) => {
     // rotation by dragging
     const rect = $img.getBoundingClientRect();
     const imgCenterX = rect.left + rect.width / 2;
@@ -141,24 +141,28 @@ $img.addEventListener('load', () => {
     const flipFactor = flipH ^ flipV ? -1 : +1;
     imgRotation += alpha * sign * flipFactor;
 
-    // scale by dragging
-    const scaleRatio = norm1 / norm2;
-    scale *= scaleRatio;
-
     if (aroundWindowCenter) {
-      // correct translation so rotation is around window center
+      // correct image position
       const dx = imgCenterX - midX;
       const dy = imgCenterY - midY;
       const cosA = Math.cos(alpha * sign);
       const sinA = Math.sin(alpha * sign);
       imageX += dx * (cosA - 1) - dy * sinA;
       imageY += dx * sinA + dy * (cosA - 1);
+    }
 
-      // same correction but for scaling
-      const adjustX = (midX - imgCenterX) * (scaleRatio - 1);
-      const adjustY = (midY - imgCenterY) * (scaleRatio - 1);
-      imageX -= adjustX;
-      imageY -= adjustY;
+    // scale by dragging
+    if (scaling) {
+      const scaleRatio = norm1 / norm2;
+      scale *= scaleRatio;
+
+      // correct image position
+      if (aroundWindowCenter) {
+        const adjustX = (midX - imgCenterX) * (scaleRatio - 1);
+        const adjustY = (midY - imgCenterY) * (scaleRatio - 1);
+        imageX -= adjustX;
+        imageY -= adjustY;
+      }
     }
 
     update_$img();
@@ -166,9 +170,9 @@ $img.addEventListener('load', () => {
   $img.addEventListener('mousemove', function(event) {
     if (!mouseDown) return;
     if (event.shiftKey)
-      on_move_rotate(event, true); // around window center
+      on_move_rotate(event, {scaling: false});
     else if (event.ctrlKey)
-      on_move_rotate(event, false); // around image center
+      on_move_rotate(event, {scaling: true});
     else
       on_move_drag(event);
     dragLastX = event.clientX;
@@ -183,7 +187,7 @@ $img.addEventListener('load', () => {
     const relX = event.clientX - (rect.left + rect.width / 2);
     const relY = event.clientY - (rect.top + rect.height / 2);
 
-    const factor = event.shiftKey ? zoom_factor*(1+0.2) : zoom_factor;
+    const factor = event.shiftKey ? zoom_factor*(1-0.1) : zoom_factor;
     const ratio = event.deltaY > 0 ? 1/factor : factor;
     scale *= ratio;
     const adjustX = relX * (ratio - 1);
@@ -194,11 +198,17 @@ $img.addEventListener('load', () => {
     update_$img();
   });
 
-  document.addEventListener('keypress', function(event) {
-    if (event.key == ' ') { // reset
+  document.addEventListener('keydown', function(event) {
+    if (event.key == ' ') { // toggle 1:1 or fit screen
+      if (scale == 1)
+        fit_$img();
+      else
+        scale = 1;
+      update_$img();
+    }
+    else if (event.key == 'Backspace') { // reset
       reset_$img();
       center_$img();
-      fit_$img();
       update_$img();
     }
     else if (event.key == 'v') { // mirror vertically
